@@ -24,13 +24,13 @@ pub struct AddAction {
     pub action: Action,
 }
 
-impl From<CliAddAction> for AddAction {
-    fn from(item: CliAddAction) -> Self {
+impl AddAction {
+    pub fn from(item: CliAddAction) -> color_eyre::eyre::Result<Self> {
         let action = match item.action {
-            Some(cli_action) => cli_action.into(),
-            None => Action::choose_action(),
+            Some(cli_action) => Action::from(cli_action)?,
+            None => Action::choose_action()?,
         };
-        Self { action }
+        Ok(Self { action })
     }
 }
 
@@ -45,8 +45,6 @@ impl AddAction {
 
 #[derive(Debug, clap::Clap)]
 pub enum CliAction {
-    /// Add a new access key for an account
-    AccessKey(self::access_key::operation_mode::CliOperationMode),
     /// Add a new contract code
     ContractCode(self::contract_code::operation_mode::CliOperationMode),
     /// Add an implicit-account
@@ -55,6 +53,8 @@ pub enum CliAction {
     StakeProposal(self::stake_proposal::operation_mode::CliOperationMode),
     /// Add a new sub-account
     SubAccount(self::sub_account::operation_mode::CliOperationMode),
+    /// Add a new access key for an account
+    AccessKey(self::access_key::operation_mode::CliOperationMode),
 }
 
 #[derive(Debug, EnumDiscriminants)]
@@ -72,30 +72,32 @@ pub enum Action {
     SubAccount(self::sub_account::operation_mode::OperationMode),
 }
 
-impl From<CliAction> for Action {
-    fn from(item: CliAction) -> Self {
+impl Action {
+    fn from(item: CliAction) -> color_eyre::eyre::Result<Self> {
         match item {
-            CliAction::AccessKey(cli_operation_mode) => {
-                Action::AccessKey(cli_operation_mode.into())
-            }
-            CliAction::ContractCode(cli_operation_mode) => {
-                Action::ContractCode(cli_operation_mode.into())
-            }
+            CliAction::AccessKey(cli_operation_mode) => Ok(Action::AccessKey(
+                self::access_key::operation_mode::OperationMode::from(cli_operation_mode)?,
+            )),
+            CliAction::ContractCode(cli_operation_mode) => Ok(Action::ContractCode(
+                self::contract_code::operation_mode::OperationMode::from(cli_operation_mode)
+                    .unwrap(),
+            )),
             CliAction::ImplicitAccount(cli_generate_keypair) => {
-                Action::ImplicitAccount(cli_generate_keypair.into())
+                Ok(Action::ImplicitAccount(cli_generate_keypair.into()))
             }
-            CliAction::StakeProposal(cli_operation_mode) => {
-                Action::StakeProposal(cli_operation_mode.into())
-            }
-            CliAction::SubAccount(cli_operation_mode) => {
-                Action::SubAccount(cli_operation_mode.into())
-            }
+            CliAction::StakeProposal(cli_operation_mode) => Ok(Action::StakeProposal(
+                self::stake_proposal::operation_mode::OperationMode::from(cli_operation_mode)
+                    .unwrap(),
+            )),
+            CliAction::SubAccount(cli_operation_mode) => Ok(Action::SubAccount(
+                self::sub_account::operation_mode::OperationMode::from(cli_operation_mode).unwrap(),
+            )),
         }
     }
 }
 
 impl Action {
-    fn choose_action() -> Self {
+    fn choose_action() -> color_eyre::eyre::Result<Self> {
         println!();
         let variants = ActionDiscriminants::iter().collect::<Vec<_>>();
         let actions = variants
@@ -115,7 +117,7 @@ impl Action {
             ActionDiscriminants::StakeProposal => CliAction::StakeProposal(Default::default()),
             ActionDiscriminants::SubAccount => CliAction::SubAccount(Default::default()),
         };
-        Self::from(cli_action)
+        Ok(Self::from(cli_action)?)
     }
 
     pub async fn process(

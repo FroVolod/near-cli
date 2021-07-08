@@ -18,15 +18,24 @@ pub struct GenerateKeypair {
     pub permission: super::add_access_key::AccessKeyPermission,
 }
 
-impl From<CliGenerateKeypair> for GenerateKeypair {
-    fn from(item: CliGenerateKeypair) -> Self {
+impl GenerateKeypair {
+    pub fn from(
+        item: CliGenerateKeypair,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         let permission: super::add_access_key::AccessKeyPermission = match item.permission {
-            Some(cli_permission) => {
-                super::add_access_key::AccessKeyPermission::from(cli_permission)
-            }
-            None => super::add_access_key::AccessKeyPermission::choose_permission(),
+            Some(cli_permission) => super::add_access_key::AccessKeyPermission::from(
+                cli_permission,
+                connection_config,
+                sender_account_id,
+            )?,
+            None => super::add_access_key::AccessKeyPermission::choose_permission(
+                connection_config,
+                sender_account_id,
+            )?,
         };
-        Self { permission }
+        Ok(Self { permission })
     }
 }
 

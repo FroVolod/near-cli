@@ -23,13 +23,13 @@ pub struct Currency {
     currency_selection: CurrencySelection,
 }
 
-impl From<CliCurrency> for Currency {
-    fn from(item: CliCurrency) -> Self {
+impl Currency {
+    pub fn from(item: CliCurrency) -> color_eyre::eyre::Result<Self> {
         let currency_selection = match item.currency_selection {
-            Some(cli_currency_selection) => CurrencySelection::from(cli_currency_selection),
-            None => CurrencySelection::choose_currency(),
+            Some(cli_currency_selection) => CurrencySelection::from(cli_currency_selection)?,
+            None => CurrencySelection::choose_currency()?,
         };
-        Self { currency_selection }
+        Ok(Self { currency_selection })
     }
 }
 
@@ -57,16 +57,18 @@ enum CurrencySelection {
     NEAR(self::operation_mode::OperationMode),
 }
 
-impl From<CliCurrencySelection> for CurrencySelection {
-    fn from(item: CliCurrencySelection) -> Self {
+impl CurrencySelection {
+    fn from(item: CliCurrencySelection) -> color_eyre::eyre::Result<Self> {
         match item {
-            CliCurrencySelection::NEAR(cli_operation_mode) => Self::NEAR(cli_operation_mode.into()),
+            CliCurrencySelection::NEAR(cli_operation_mode) => Ok(Self::NEAR(
+                self::operation_mode::OperationMode::from(cli_operation_mode)?,
+            )),
         }
     }
 }
 
 impl CurrencySelection {
-    fn choose_currency() -> Self {
+    fn choose_currency() -> color_eyre::eyre::Result<Self> {
         println!();
         let variants = CurrencySelectionDiscriminants::iter().collect::<Vec<_>>();
         let currencies = variants
@@ -82,7 +84,7 @@ impl CurrencySelection {
         let cli_currency = match variants[selected_currency] {
             CurrencySelectionDiscriminants::NEAR => CliCurrencySelection::NEAR(Default::default()),
         };
-        Self::from(cli_currency)
+        Ok(Self::from(cli_currency)?)
     }
 
     async fn process(

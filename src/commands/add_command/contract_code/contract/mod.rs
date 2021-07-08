@@ -17,18 +17,25 @@ pub enum Contract {
     ContractFile(ContractFile),
 }
 
-impl From<CliContract> for Contract {
-    fn from(item: CliContract) -> Self {
+impl Contract {
+    pub fn from(
+        item: CliContract,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         match item {
-            CliContract::ContractFile(cli_contract_file) => {
-                Contract::ContractFile(cli_contract_file.into())
-            }
+            CliContract::ContractFile(cli_contract_file) => Ok(Contract::ContractFile(
+                ContractFile::from(cli_contract_file, connection_config, sender_account_id)?,
+            )),
         }
     }
 }
 
 impl Contract {
-    pub fn choose_contract() -> Self {
+    pub fn choose_contract(
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         println!();
         let variants = ContractDiscriminants::iter().collect::<Vec<_>>();
         let contracts = variants
@@ -44,7 +51,11 @@ impl Contract {
         let cli_contract = match variants[selected_contract] {
             ContractDiscriminants::ContractFile => CliContract::ContractFile(Default::default()),
         };
-        Self::from(cli_contract)
+        Ok(Self::from(
+            cli_contract,
+            connection_config,
+            sender_account_id,
+        )?)
     }
 
     pub async fn process(
@@ -81,20 +92,31 @@ pub struct ContractFile {
     next_action: self::initialize_mode::NextAction,
 }
 
-impl From<CliContractFile> for ContractFile {
-    fn from(item: CliContractFile) -> Self {
+impl ContractFile {
+    fn from(
+        item: CliContractFile,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         let file_path = match item.file_path {
             Some(cli_file_path) => cli_file_path,
             None => ContractFile::input_file_path(),
         };
         let next_action = match item.next_action {
-            Some(cli_next_action) => self::initialize_mode::NextAction::from(cli_next_action),
-            None => self::initialize_mode::NextAction::choose_next_action(),
+            Some(cli_next_action) => self::initialize_mode::NextAction::from(
+                cli_next_action,
+                connection_config,
+                sender_account_id,
+            )?,
+            None => self::initialize_mode::NextAction::choose_next_action(
+                connection_config,
+                sender_account_id,
+            )?,
         };
-        ContractFile {
+        Ok(ContractFile {
             file_path,
             next_action,
-        }
+        })
     }
 }
 

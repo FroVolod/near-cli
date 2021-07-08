@@ -10,19 +10,65 @@ use serde::Deserialize;
     setting(clap::AppSettings::VersionlessSubcommands)
 )]
 pub struct CliSignKeychain {
+    #[clap(long)]
+    nonce: Option<u64>,
+    #[clap(long)]
+    block_hash: Option<near_primitives::hash::CryptoHash>,
     #[clap(subcommand)]
     submit: Option<super::sign_with_private_key::Submit>,
 }
 
 #[derive(Debug)]
 pub struct SignKeychain {
+    nonce: u64,
+    block_hash: near_primitives::hash::CryptoHash,
     pub submit: Option<super::sign_with_private_key::Submit>,
 }
 
-impl From<CliSignKeychain> for SignKeychain {
-    fn from(item: CliSignKeychain) -> Self {
-        SignKeychain {
-            submit: item.submit,
+impl SignKeychain {
+    pub fn from(
+        item: CliSignKeychain,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
+        let submit: Option<super::sign_with_private_key::Submit> = item.submit;
+        match connection_config {
+            Some(_) => Ok(Self {
+                nonce: 0,
+                block_hash: Default::default(),
+                submit,
+            }),
+            None => {
+                let home_dir = dirs::home_dir().expect("Impossible to get your home dir!");
+                let file_name = format!("{}.json", sender_account_id);
+                let mut path = std::path::PathBuf::from(&home_dir);
+                let dir_name = crate::consts::DIR_NAME_KEY_CHAIN;
+                path.push(dir_name);
+                path.push(file_name);
+                let data = std::fs::read_to_string(path).map_err(|err| {
+                    color_eyre::Report::msg(format!("Access key file not found! Error: {}", err))
+                })?;
+                let account_json: User = serde_json::from_str(&data).map_err(|err| {
+                    color_eyre::Report::msg(format!(
+                        "Data for the access key was not found in the file! Error: {}",
+                        err
+                    ))
+                })?;
+
+                let nonce: u64 = match item.nonce {
+                    Some(cli_nonce) => cli_nonce,
+                    None => super::input_access_key_nonce(&account_json.public_key.to_string()),
+                };
+                let block_hash = match item.block_hash {
+                    Some(cli_block_hash) => cli_block_hash,
+                    None => super::input_block_hash(),
+                };
+                Ok(SignKeychain {
+                    nonce,
+                    block_hash,
+                    submit,
+                })
+            }
         }
     }
 }
@@ -53,14 +99,7 @@ impl SignKeychain {
                 let dir_name = crate::consts::DIR_NAME_KEY_CHAIN;
                 path.push(dir_name);
                 path.push(file_name);
-                let data_path: std::path::PathBuf = if path.exists() {
-                    path
-                } else {
-                    return Err(color_eyre::Report::msg(format!(
-                        "Error: Access key file not found!"
-                    )));
-                };
-                data_path
+                path
             }
             Some(connection_config) => {
                 let dir_name = connection_config.dir_name();
@@ -138,11 +177,16 @@ impl SignKeychain {
                 }
             }
         };
-        let data = std::fs::read_to_string(data_path).unwrap();
-        let account_json: User = serde_json::from_str(&data).unwrap();
+        let data = std::fs::read_to_string(data_path).map_err(|err| {
+            color_eyre::Report::msg(format!("Access key file not found! Error: {}", err))
+        })?;
+        let account_json: User = serde_json::from_str(&data)
+            .map_err(|err| color_eyre::Report::msg(format!("Error reading data: {}", err)))?;
         let sign_with_private_key = super::sign_with_private_key::SignPrivateKey {
             signer_public_key: account_json.public_key,
             signer_secret_key: account_json.private_key,
+            nonce: self.nonce.clone(),
+            block_hash: self.block_hash.clone(),
             submit: self.submit.clone(),
         };
         sign_with_private_key

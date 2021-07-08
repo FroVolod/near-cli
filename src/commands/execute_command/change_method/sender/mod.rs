@@ -11,17 +11,27 @@ pub enum SendFrom {
     Signer(Sender),
 }
 
-impl From<CliSendFrom> for SendFrom {
-    fn from(item: CliSendFrom) -> Self {
+impl SendFrom {
+    pub fn from(
+        item: CliSendFrom,
+        connection_config: Option<crate::common::ConnectionConfig>,
+    ) -> color_eyre::eyre::Result<Self> {
         match item {
-            CliSendFrom::Signer(cli_sender) => Self::Signer(cli_sender.into()),
+            CliSendFrom::Signer(cli_sender) => {
+                Ok(Self::Signer(Sender::from(cli_sender, connection_config)?))
+            }
         }
     }
 }
 
 impl SendFrom {
-    pub fn choose_send_from() -> Self {
-        Self::from(CliSendFrom::Signer(Default::default()))
+    pub fn choose_send_from(
+        connection_config: Option<crate::common::ConnectionConfig>,
+    ) -> color_eyre::eyre::Result<Self> {
+        Ok(Self::from(
+            CliSendFrom::Signer(Default::default()),
+            connection_config,
+        )?)
     }
 
     pub async fn process(
@@ -61,20 +71,23 @@ pub struct Sender {
         crate::commands::construct_transaction_command::sign_transaction::SignTransaction,
 }
 
-impl From<CliSender> for Sender {
-    fn from(item: CliSender) -> Self {
+impl Sender {
+    fn from(
+        item: CliSender,
+        connection_config: Option<crate::common::ConnectionConfig>,
+    ) -> color_eyre::eyre::Result<Self> {
         let sender_account_id: String = match item.sender_account_id {
             Some(cli_sender_account_id) => cli_sender_account_id,
             None => Sender::input_sender_account_id(),
         };
         let sign_option = match item.sign_option {
-            Some(cli_sign_transaction) => cli_sign_transaction.into(),
-            None => crate::commands::construct_transaction_command::sign_transaction::SignTransaction::choose_sign_option(),
+            Some(cli_sign_transaction) => crate::commands::construct_transaction_command::sign_transaction::SignTransaction::from(cli_sign_transaction, connection_config, sender_account_id.clone())?,
+            None => crate::commands::construct_transaction_command::sign_transaction::SignTransaction::choose_sign_option(connection_config, sender_account_id.clone())?,
         };
-        Self {
+        Ok(Self {
             sender_account_id,
             sign_option,
-        }
+        })
     }
 }
 

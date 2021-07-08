@@ -19,25 +19,35 @@ pub struct Sender {
     pub transfer: super::transfer_near_tokens_type::Transfer,
 }
 
-impl From<CliSender> for Sender {
-    fn from(item: CliSender) -> Self {
+impl Sender {
+    pub fn from(
+        item: CliSender,
+        connection_config: Option<crate::common::ConnectionConfig>,
+    ) -> color_eyre::eyre::Result<Self> {
         let sender_account_id: String = match item.sender_account_id {
             Some(cli_sender_account_id) => cli_sender_account_id,
             None => Sender::input_sender_account_id(),
         };
         let transfer: super::transfer_near_tokens_type::Transfer = match item.transfer {
-            Some(cli_transfer) => cli_transfer.into(),
-            None => super::transfer_near_tokens_type::Transfer::choose_transfer_near(),
+            Some(cli_transfer) => super::transfer_near_tokens_type::Transfer::from(
+                cli_transfer,
+                connection_config,
+                sender_account_id.clone(),
+            )?,
+            None => super::transfer_near_tokens_type::Transfer::choose_transfer_near(
+                connection_config,
+                sender_account_id.clone(),
+            )?,
         };
-        Self {
+        Ok(Self {
             sender_account_id,
             transfer,
-        }
+        })
     }
 }
 
 impl Sender {
-    pub fn input_sender_account_id() -> String {
+    fn input_sender_account_id() -> String {
         println!();
         Input::new()
             .with_prompt("What is the account ID of the validator?")

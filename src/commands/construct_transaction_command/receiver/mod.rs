@@ -11,20 +11,31 @@ pub enum SendTo {
     Receiver(Receiver),
 }
 
-impl From<CliSendTo> for SendTo {
-    fn from(item: CliSendTo) -> Self {
+impl SendTo {
+    pub fn from(
+        item: CliSendTo,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         match item {
             CliSendTo::Receiver(cli_receiver) => {
-                let receiver = Receiver::from(cli_receiver);
-                Self::Receiver(receiver)
+                let receiver = Receiver::from(cli_receiver, connection_config, sender_account_id)?;
+                Ok(Self::Receiver(receiver))
             }
         }
     }
 }
 
 impl SendTo {
-    pub fn send_to() -> Self {
-        Self::from(CliSendTo::Receiver(Default::default()))
+    pub fn send_to(
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
+        Ok(Self::from(
+            CliSendTo::Receiver(Default::default()),
+            connection_config,
+            sender_account_id,
+        )?)
     }
 
     pub async fn process(
@@ -61,20 +72,31 @@ pub struct Receiver {
     pub action: super::transaction_actions::NextAction,
 }
 
-impl From<CliReceiver> for Receiver {
-    fn from(item: CliReceiver) -> Self {
+impl Receiver {
+    fn from(
+        item: CliReceiver,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         let receiver_account_id: String = match item.receiver_account_id {
             Some(cli_receiver_account_id) => cli_receiver_account_id,
             None => Receiver::input_receiver_account_id(),
         };
         let action: super::transaction_actions::NextAction = match item.action {
-            Some(cli_next_action) => super::transaction_actions::NextAction::from(cli_next_action),
-            None => super::transaction_actions::NextAction::input_next_action(),
+            Some(cli_next_action) => super::transaction_actions::NextAction::from_cli_next_action(
+                cli_next_action,
+                connection_config,
+                sender_account_id,
+            )?,
+            None => super::transaction_actions::NextAction::input_next_action(
+                connection_config,
+                sender_account_id,
+            )?,
         };
-        Self {
+        Ok(Self {
             receiver_account_id,
             action,
-        }
+        })
     }
 }
 

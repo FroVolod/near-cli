@@ -60,9 +60,10 @@ enum Method {
 impl From<CliMethod> for Method {
     fn from(item: CliMethod) -> Self {
         match item {
-            CliMethod::ChangeMethod(cli_operation_mode) => {
-                Method::ChangeMethod(cli_operation_mode.into())
-            }
+            CliMethod::ChangeMethod(cli_operation_mode) => Method::ChangeMethod(
+                self::change_method::operation_mode::OperationMode::from(cli_operation_mode)
+                    .unwrap(),
+            ),
             CliMethod::ViewMethod(cli_operation_mode) => {
                 Method::ViewMethod(cli_operation_mode.into())
             }

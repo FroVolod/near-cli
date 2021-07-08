@@ -22,8 +22,12 @@ pub struct StakeNEARTokensAction {
     pub next_action: Box<super::NextAction>,
 }
 
-impl From<CliStakeNEARTokensAction> for StakeNEARTokensAction {
-    fn from(item: CliStakeNEARTokensAction) -> Self {
+impl StakeNEARTokensAction {
+    pub fn from(
+        item: CliStakeNEARTokensAction,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         let stake: crate::common::NearBalance = match item.stake {
             Some(cli_stake) => cli_stake,
             None => StakeNEARTokensAction::input_stake(),
@@ -33,14 +37,18 @@ impl From<CliStakeNEARTokensAction> for StakeNEARTokensAction {
             None => StakeNEARTokensAction::input_public_key(),
         };
         let skip_next_action: super::NextAction = match item.next_action {
-            Some(cli_skip_action) => super::NextAction::from(cli_skip_action),
-            None => super::NextAction::input_next_action(),
+            Some(cli_skip_action) => super::NextAction::from_cli_skip_next_action(
+                cli_skip_action,
+                connection_config,
+                sender_account_id,
+            )?,
+            None => super::NextAction::input_next_action(connection_config, sender_account_id)?,
         };
-        Self {
+        Ok(Self {
             stake,
             public_key,
             next_action: Box::new(skip_next_action),
-        }
+        })
     }
 }
 

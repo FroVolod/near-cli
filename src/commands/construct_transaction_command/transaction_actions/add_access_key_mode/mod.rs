@@ -21,13 +21,19 @@ pub struct AddAccessKeyMode {
     pub public_key_mode: PublicKeyMode,
 }
 
-impl From<CliAddAccessKeyMode> for AddAccessKeyMode {
-    fn from(item: CliAddAccessKeyMode) -> Self {
+impl AddAccessKeyMode {
+    pub fn from(
+        item: CliAddAccessKeyMode,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         let public_key_mode = match item.public_key_mode {
-            Some(cli_public_key_mode) => PublicKeyMode::from(cli_public_key_mode),
-            None => PublicKeyMode::choose_public_key_mode(),
+            Some(cli_public_key_mode) => {
+                PublicKeyMode::from(cli_public_key_mode, connection_config, sender_account_id)?
+            }
+            None => PublicKeyMode::choose_public_key_mode(connection_config, sender_account_id)?,
         };
-        Self { public_key_mode }
+        Ok(Self { public_key_mode })
     }
 }
 
@@ -60,21 +66,36 @@ pub enum PublicKeyMode {
     GenerateKeypair(self::generate_keypair::GenerateKeypair),
 }
 
-impl From<CliPublicKeyMode> for PublicKeyMode {
-    fn from(item: CliPublicKeyMode) -> Self {
+impl PublicKeyMode {
+    fn from(
+        item: CliPublicKeyMode,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         match item {
-            CliPublicKeyMode::PublicKey(cli_add_access_key_action) => {
-                PublicKeyMode::PublicKey(cli_add_access_key_action.into())
-            }
-            CliPublicKeyMode::GenerateKeypair(cli_generate_keypair) => {
-                PublicKeyMode::GenerateKeypair(cli_generate_keypair.into())
-            }
+            CliPublicKeyMode::PublicKey(cli_add_access_key_action) => Ok(PublicKeyMode::PublicKey(
+                self::add_access_key::AddAccessKeyAction::from(
+                    cli_add_access_key_action,
+                    connection_config,
+                    sender_account_id,
+                )?,
+            )),
+            CliPublicKeyMode::GenerateKeypair(cli_generate_keypair) => Ok(
+                PublicKeyMode::GenerateKeypair(self::generate_keypair::GenerateKeypair::from(
+                    cli_generate_keypair,
+                    connection_config,
+                    sender_account_id,
+                )?),
+            ),
         }
     }
 }
 
 impl PublicKeyMode {
-    pub fn choose_public_key_mode() -> Self {
+    fn choose_public_key_mode(
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         let variants = PublicKeyModeDiscriminants::iter().collect::<Vec<_>>();
         let modes = variants
             .iter()
@@ -87,12 +108,16 @@ impl PublicKeyMode {
             .interact()
             .unwrap();
         match variants[select_mode] {
-            PublicKeyModeDiscriminants::PublicKey => {
-                Self::from(CliPublicKeyMode::PublicKey(Default::default()))
-            }
-            PublicKeyModeDiscriminants::GenerateKeypair => {
-                Self::from(CliPublicKeyMode::GenerateKeypair(Default::default()))
-            }
+            PublicKeyModeDiscriminants::PublicKey => Ok(Self::from(
+                CliPublicKeyMode::PublicKey(Default::default()),
+                connection_config,
+                sender_account_id,
+            )?),
+            PublicKeyModeDiscriminants::GenerateKeypair => Ok(Self::from(
+                CliPublicKeyMode::GenerateKeypair(Default::default()),
+                connection_config,
+                sender_account_id,
+            )?),
         }
     }
 

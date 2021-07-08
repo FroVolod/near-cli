@@ -1,4 +1,4 @@
-use dialoguer::{theme::ColorfulTheme, Input, Select};
+use dialoguer::{theme::ColorfulTheme, Select};
 use near_primitives::borsh::BorshSerialize;
 use strum::{EnumDiscriminants, EnumIter, EnumMessage, IntoEnumIterator};
 
@@ -14,6 +14,10 @@ pub struct CliSignPrivateKey {
     signer_public_key: Option<near_crypto::PublicKey>,
     #[clap(long)]
     signer_secret_key: Option<near_crypto::SecretKey>,
+    #[clap(long)]
+    nonce: Option<u64>,
+    #[clap(long)]
+    block_hash: Option<near_primitives::hash::CryptoHash>,
     #[clap(subcommand)]
     submit: Option<Submit>,
 }
@@ -22,56 +26,75 @@ pub struct CliSignPrivateKey {
 pub struct SignPrivateKey {
     pub signer_public_key: near_crypto::PublicKey,
     pub signer_secret_key: near_crypto::SecretKey,
+    pub nonce: u64,
+    pub block_hash: near_primitives::hash::CryptoHash,
     pub submit: Option<Submit>,
 }
 
-impl From<CliSignPrivateKey> for SignPrivateKey {
-    fn from(item: CliSignPrivateKey) -> Self {
+impl SignPrivateKey {
+    pub fn from(
+        item: CliSignPrivateKey,
+        connection_config: Option<crate::common::ConnectionConfig>,
+    ) -> Self {
         let signer_public_key: near_crypto::PublicKey = match item.signer_public_key {
             Some(cli_public_key) => cli_public_key,
-            None => SignPrivateKey::signer_public_key(),
+            None => super::input_signer_public_key(),
         };
         let signer_secret_key: near_crypto::SecretKey = match item.signer_secret_key {
             Some(cli_secret_key) => cli_secret_key,
-            None => SignPrivateKey::signer_secret_key(),
+            None => super::input_signer_secret_key(),
         };
         let submit: Option<Submit> = item.submit;
-        let public_key_origin: near_crypto::PublicKey =
-            near_crypto::SecretKey::public_key(&signer_secret_key);
-        if &signer_public_key == &public_key_origin {
-            Self {
+        match connection_config {
+            Some(_) => Self {
                 signer_public_key,
                 signer_secret_key,
+                nonce: 0,
+                block_hash: Default::default(),
                 submit,
+            },
+            None => {
+                let nonce: u64 = match item.nonce {
+                    Some(cli_nonce) => cli_nonce,
+                    None => super::input_access_key_nonce(&signer_public_key.to_string()),
+                };
+                let block_hash = match item.block_hash {
+                    Some(cli_block_hash) => cli_block_hash,
+                    None => super::input_block_hash(),
+                };
+                let public_key_origin: near_crypto::PublicKey =
+                    near_crypto::SecretKey::public_key(&signer_secret_key);
+                if &signer_public_key == &public_key_origin {
+                    Self {
+                        signer_public_key,
+                        signer_secret_key,
+                        nonce,
+                        block_hash,
+                        submit,
+                    }
+                } else {
+                    println!("\nError: The key pair does not match. Re-enter the keys.\n");
+                    let signer_public_key: near_crypto::PublicKey =
+                        super::input_signer_public_key();
+                    let signer_secret_key: near_crypto::SecretKey =
+                        super::input_signer_secret_key();
+                    Self::from(
+                        CliSignPrivateKey {
+                            signer_public_key: Some(signer_public_key),
+                            signer_secret_key: Some(signer_secret_key),
+                            nonce: Some(nonce),
+                            block_hash: Some(block_hash),
+                            submit: None,
+                        },
+                        connection_config,
+                    )
+                }
             }
-        } else {
-            println!("\nError: The key pair does not match. Re-enter the keys.\n");
-            let signer_public_key: near_crypto::PublicKey = Self::signer_public_key();
-            let signer_secret_key: near_crypto::SecretKey = Self::signer_secret_key();
-            Self::from(CliSignPrivateKey {
-                signer_public_key: Some(signer_public_key),
-                signer_secret_key: Some(signer_secret_key),
-                submit: None,
-            })
         }
     }
 }
 
 impl SignPrivateKey {
-    pub fn signer_public_key() -> near_crypto::PublicKey {
-        Input::new()
-            .with_prompt("Enter sender's public key")
-            .interact_text()
-            .unwrap()
-    }
-
-    pub fn signer_secret_key() -> near_crypto::SecretKey {
-        Input::new()
-            .with_prompt("Enter sender's private key")
-            .interact_text()
-            .unwrap()
-    }
-
     fn rpc_client(self, selected_server_url: &str) -> near_jsonrpc_client::JsonRpcClient {
         near_jsonrpc_client::new_client(&selected_server_url)
     }
@@ -83,11 +106,15 @@ impl SignPrivateKey {
     ) -> color_eyre::eyre::Result<Option<near_primitives::views::FinalExecutionOutcomeView>> {
         let public_key: near_crypto::PublicKey = self.signer_public_key.clone();
         let signer_secret_key: near_crypto::SecretKey = self.signer_secret_key.clone();
+        let nonce: u64 = self.nonce.clone();
+        let block_hash: near_primitives::hash::CryptoHash = self.block_hash.clone();
         let submit: Option<Submit> = self.submit.clone();
         match network_connection_config {
             None => {
                 let unsigned_transaction = near_primitives::transaction::Transaction {
                     public_key,
+                    nonce,
+                    block_hash,
                     ..prepopulated_unsigned_transaction
                 };
                 let signature =
@@ -228,7 +255,7 @@ impl Submit {
             &signed_transaction
         );
         println!(
-            "\n\n---  serialize_to_base64:   --- \n   {:#?}",
+            "\n\n---  serialize_to_base64:   --- \n   {}",
             &serialize_to_base64
         );
         Ok(None)
@@ -280,7 +307,7 @@ impl Submit {
                     &signed_transaction
                 );
                 println!(
-                    "\n\n---  serialize_to_base64:   --- \n {:#?}",
+                    "\n\n---  serialize_to_base64:   --- \n {}",
                     &serialize_to_base64
                 );
                 Ok(None)

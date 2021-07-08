@@ -7,29 +7,29 @@ pub mod select_server;
     setting(clap::AppSettings::DisableHelpSubcommand),
     setting(clap::AppSettings::VersionlessSubcommands)
 )]
-pub struct CliOnlineArgs {
+pub struct CliNetworkArgs {
     #[clap(subcommand)]
     selected_server: Option<self::select_server::CliSelectServer>,
 }
 
 #[derive(Debug)]
-pub struct OnlineArgs {
+pub struct NetworkArgs {
     selected_server: self::select_server::SelectServer,
 }
 
-impl From<CliOnlineArgs> for OnlineArgs {
-    fn from(item: CliOnlineArgs) -> Self {
+impl NetworkArgs {
+    pub fn from(item: CliNetworkArgs) -> color_eyre::eyre::Result<Self> {
         let selected_server = match item.selected_server {
             Some(cli_selected_server) => {
-                self::select_server::SelectServer::from(cli_selected_server)
+                self::select_server::SelectServer::from(cli_selected_server)?
             }
-            None => self::select_server::SelectServer::choose_server(),
+            None => self::select_server::SelectServer::choose_server()?,
         };
-        Self { selected_server }
+        Ok(Self { selected_server })
     }
 }
 
-impl OnlineArgs {
+impl NetworkArgs {
     pub async fn process(
         self,
         prepopulated_unsigned_transaction: near_primitives::transaction::Transaction,

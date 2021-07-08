@@ -28,25 +28,33 @@ pub struct CliCustomServer {
 
 #[derive(Debug)]
 pub struct Server {
-    pub network_connection_config: Option<crate::common::ConnectionConfig>,
+    pub connection_config: Option<crate::common::ConnectionConfig>,
     pub send_to: super::super::super::super::receiver::SendTo,
 }
 
 impl CliServer {
-    pub fn into_server(self, network_connection_config: crate::common::ConnectionConfig) -> Server {
+    pub fn into_server(
+        self,
+        connection_config: crate::common::ConnectionConfig,
+    ) -> color_eyre::eyre::Result<Server> {
         let send_to = match self.send_to {
-            Some(cli_send_to) => super::super::super::super::receiver::SendTo::from(cli_send_to),
-            None => super::super::super::super::receiver::SendTo::send_to(),
+            Some(cli_send_to) => super::super::super::super::receiver::SendTo::from(
+                cli_send_to,
+                Some(connection_config.clone()),
+            )?,
+            None => super::super::super::super::receiver::SendTo::send_to(Some(
+                connection_config.clone(),
+            ))?,
         };
-        Server {
-            network_connection_config: Some(network_connection_config),
+        Ok(Server {
+            connection_config: Some(connection_config),
             send_to,
-        }
+        })
     }
 }
 
 impl CliCustomServer {
-    pub fn into_server(self) -> Server {
+    pub fn into_server(self) -> color_eyre::eyre::Result<Server> {
         let url: crate::common::AvailableRpcServerUrl = match self.url {
             Some(url) => url,
             None => Input::new()
@@ -54,16 +62,22 @@ impl CliCustomServer {
                 .interact_text()
                 .unwrap(),
         };
+        let connection_config = Some(crate::common::ConnectionConfig::Custom {
+            url: url.inner.clone(),
+        });
         let send_to = match self.send_to {
-            Some(cli_send_to) => super::super::super::super::receiver::SendTo::from(cli_send_to),
-            None => super::super::super::super::receiver::SendTo::send_to(),
+            Some(cli_send_to) => super::super::super::super::receiver::SendTo::from(
+                cli_send_to,
+                connection_config.clone(),
+            )?,
+            None => {
+                super::super::super::super::receiver::SendTo::send_to(connection_config.clone())?
+            }
         };
-        Server {
-            network_connection_config: Some(crate::common::ConnectionConfig::Custom {
-                url: url.inner,
-            }),
+        Ok(Server {
+            connection_config,
             send_to,
-        }
+        })
     }
 }
 
@@ -73,10 +87,7 @@ impl Server {
         prepopulated_unsigned_transaction: near_primitives::transaction::Transaction,
     ) -> crate::CliResult {
         self.send_to
-            .process(
-                prepopulated_unsigned_transaction,
-                self.network_connection_config,
-            )
+            .process(prepopulated_unsigned_transaction, self.connection_config)
             .await
     }
 }

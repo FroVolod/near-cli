@@ -21,20 +21,28 @@ pub struct DeleteAccessKeyAction {
     pub next_action: Box<super::NextAction>,
 }
 
-impl From<CliDeleteAccessKeyAction> for DeleteAccessKeyAction {
-    fn from(item: CliDeleteAccessKeyAction) -> Self {
+impl DeleteAccessKeyAction {
+    pub fn from(
+        item: CliDeleteAccessKeyAction,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         let public_key: near_crypto::PublicKey = match item.public_key {
             Some(cli_public_key) => cli_public_key,
             None => DeleteAccessKeyAction::input_public_key(),
         };
         let skip_next_action: super::NextAction = match item.next_action {
-            Some(cli_skip_action) => super::NextAction::from(cli_skip_action),
-            None => super::NextAction::input_next_action(),
+            Some(cli_skip_action) => super::NextAction::from_cli_skip_next_action(
+                cli_skip_action,
+                connection_config,
+                sender_account_id,
+            )?,
+            None => super::NextAction::input_next_action(connection_config, sender_account_id)?,
         };
-        Self {
+        Ok(Self {
             public_key,
             next_action: Box::new(skip_next_action),
-        }
+        })
     }
 }
 

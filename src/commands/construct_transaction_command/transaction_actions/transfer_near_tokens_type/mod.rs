@@ -20,20 +20,28 @@ pub struct TransferNEARTokensAction {
     pub next_action: Box<super::NextAction>,
 }
 
-impl From<CliTransferNEARTokensAction> for TransferNEARTokensAction {
-    fn from(item: CliTransferNEARTokensAction) -> Self {
+impl TransferNEARTokensAction {
+    pub fn from(
+        item: CliTransferNEARTokensAction,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         let amount: crate::common::NearBalance = match item.amount {
             Some(cli_amount) => cli_amount,
             None => TransferNEARTokensAction::input_amount(),
         };
         let skip_next_action: super::NextAction = match item.next_action {
-            Some(cli_skip_action) => super::NextAction::from(cli_skip_action),
-            None => super::NextAction::input_next_action(),
+            Some(cli_skip_action) => super::NextAction::from_cli_skip_next_action(
+                cli_skip_action,
+                connection_config,
+                sender_account_id,
+            )?,
+            None => super::NextAction::input_next_action(connection_config, sender_account_id)?,
         };
-        Self {
+        Ok(Self {
             amount,
             next_action: Box::new(skip_next_action),
-        }
+        })
     }
 }
 

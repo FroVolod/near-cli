@@ -61,13 +61,20 @@ pub enum TopLevelCommand {
 impl From<CliTopLevelCommand> for TopLevelCommand {
     fn from(cli_top_level_command: CliTopLevelCommand) -> Self {
         match cli_top_level_command {
-            CliTopLevelCommand::Add(cli_add_action) => TopLevelCommand::Add(cli_add_action.into()),
+            CliTopLevelCommand::Add(cli_add_action) => {
+                TopLevelCommand::Add(self::add_command::AddAction::from(cli_add_action).unwrap())
+            }
             CliTopLevelCommand::ConstructTransaction(cli_operation_mode) => {
-                TopLevelCommand::ConstructTransaction(cli_operation_mode.into())
+                TopLevelCommand::ConstructTransaction(
+                    self::construct_transaction_command::operation_mode::OperationMode::from(
+                        cli_operation_mode,
+                    )
+                    .unwrap(),
+                )
             }
-            CliTopLevelCommand::Delete(cli_delete_action) => {
-                TopLevelCommand::Delete(cli_delete_action.into())
-            }
+            CliTopLevelCommand::Delete(cli_delete_action) => TopLevelCommand::Delete(
+                self::delete_command::DeleteAction::from(cli_delete_action).unwrap(),
+            ),
             CliTopLevelCommand::Execute(cli_option_method) => {
                 TopLevelCommand::Execute(cli_option_method.into())
             }
@@ -77,9 +84,9 @@ impl From<CliTopLevelCommand> for TopLevelCommand {
             CliTopLevelCommand::Login(cli_option_method) => {
                 TopLevelCommand::Login(cli_option_method.into())
             }
-            CliTopLevelCommand::Transfer(cli_currency) => {
-                TopLevelCommand::Transfer(cli_currency.into())
-            }
+            CliTopLevelCommand::Transfer(cli_currency) => TopLevelCommand::Transfer(
+                self::transfer_command::Currency::from(cli_currency).unwrap(),
+            ),
             CliTopLevelCommand::Utils(cli_util) => TopLevelCommand::Utils(cli_util.into()),
             CliTopLevelCommand::View(cli_view_query_request) => {
                 TopLevelCommand::View(cli_view_query_request.into())

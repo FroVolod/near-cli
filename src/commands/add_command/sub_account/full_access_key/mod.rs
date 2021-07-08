@@ -16,18 +16,29 @@ pub enum FullAccessKey {
     SubAccountFullAccess(SubAccountFullAccess),
 }
 
-impl From<CliFullAccessKey> for FullAccessKey {
-    fn from(item: CliFullAccessKey) -> Self {
+impl FullAccessKey {
+    pub fn from(
+        item: CliFullAccessKey,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         match item {
-            CliFullAccessKey::SubAccountFullAccess(cli_sub_account_full_access) => {
-                FullAccessKey::SubAccountFullAccess(cli_sub_account_full_access.into())
-            }
+            CliFullAccessKey::SubAccountFullAccess(cli_sub_account_full_access) => Ok(
+                FullAccessKey::SubAccountFullAccess(SubAccountFullAccess::from(
+                    cli_sub_account_full_access,
+                    connection_config,
+                    sender_account_id,
+                )?),
+            ),
         }
     }
 }
 
 impl FullAccessKey {
-    pub fn choose_full_access_key() -> Self {
+    pub fn choose_full_access_key(
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         println!();
         let variants = FullAccessKeyDiscriminants::iter().collect::<Vec<_>>();
         let actions = variants
@@ -45,7 +56,11 @@ impl FullAccessKey {
                 CliFullAccessKey::SubAccountFullAccess(Default::default())
             }
         };
-        Self::from(cli_action)
+        Ok(Self::from(
+            cli_action,
+            connection_config,
+            sender_account_id,
+        )?)
     }
 
     pub async fn process(
@@ -80,15 +95,24 @@ pub struct SubAccountFullAccess {
     pub public_key_mode: self::public_key_mode::PublicKeyMode,
 }
 
-impl From<CliSubAccountFullAccess> for SubAccountFullAccess {
-    fn from(item: CliSubAccountFullAccess) -> Self {
+impl SubAccountFullAccess {
+    fn from(
+        item: CliSubAccountFullAccess,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         let public_key_mode = match item.public_key_mode {
-            Some(cli_public_key_mode) => {
-                self::public_key_mode::PublicKeyMode::from(cli_public_key_mode)
-            }
-            None => self::public_key_mode::PublicKeyMode::choose_public_key_mode(),
+            Some(cli_public_key_mode) => self::public_key_mode::PublicKeyMode::from(
+                cli_public_key_mode,
+                connection_config,
+                sender_account_id,
+            )?,
+            None => self::public_key_mode::PublicKeyMode::choose_public_key_mode(
+                connection_config,
+                sender_account_id,
+            )?,
         };
-        Self { public_key_mode }
+        Ok(Self { public_key_mode })
     }
 }
 

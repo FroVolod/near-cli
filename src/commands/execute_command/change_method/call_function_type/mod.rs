@@ -27,8 +27,11 @@ pub struct CallFunctionAction {
     send_from: super::sender::SendFrom,
 }
 
-impl From<CliCallFunctionAction> for CallFunctionAction {
-    fn from(item: CliCallFunctionAction) -> Self {
+impl CallFunctionAction {
+    pub fn from(
+        item: CliCallFunctionAction,
+        connection_config: Option<crate::common::ConnectionConfig>,
+    ) -> color_eyre::eyre::Result<Self> {
         let method_name: String = match item.method_name {
             Some(cli_method_name) => cli_method_name,
             None => CallFunctionAction::input_method_name(),
@@ -48,16 +51,16 @@ impl From<CliCallFunctionAction> for CallFunctionAction {
             None => CallFunctionAction::input_deposit(),
         };
         let send_from = match item.send_from {
-            Some(cli_send_from) => super::sender::SendFrom::from(cli_send_from),
-            None => super::sender::SendFrom::choose_send_from(),
+            Some(cli_send_from) => super::sender::SendFrom::from(cli_send_from, connection_config)?,
+            None => super::sender::SendFrom::choose_send_from(connection_config)?,
         };
-        Self {
+        Ok(Self {
             method_name,
             args,
             gas,
             deposit,
             send_from,
-        }
+        })
     }
 }
 

@@ -28,8 +28,12 @@ pub struct FunctionCallType {
     pub next_action: Box<super::super::super::NextAction>,
 }
 
-impl From<CliFunctionCallType> for FunctionCallType {
-    fn from(item: CliFunctionCallType) -> Self {
+impl FunctionCallType {
+    pub fn from(
+        item: CliFunctionCallType,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         let allowance: Option<near_primitives::types::Balance> = match item.allowance {
             Some(cli_allowance) => Some(cli_allowance.to_yoctonear()),
             None => FunctionCallType::input_allowance(),
@@ -52,15 +56,22 @@ impl From<CliFunctionCallType> for FunctionCallType {
             None => FunctionCallType::input_method_names(),
         };
         let skip_next_action: super::super::super::NextAction = match item.next_action {
-            Some(cli_skip_action) => super::super::super::NextAction::from(cli_skip_action),
-            None => super::super::super::NextAction::input_next_action(),
+            Some(cli_skip_action) => super::super::super::NextAction::from_cli_skip_next_action(
+                cli_skip_action,
+                connection_config,
+                sender_account_id,
+            )?,
+            None => super::super::super::NextAction::input_next_action(
+                connection_config,
+                sender_account_id,
+            )?,
         };
-        Self {
+        Ok(Self {
             allowance,
             receiver_id,
             method_names,
             next_action: Box::new(skip_next_action),
-        }
+        })
     }
 }
 

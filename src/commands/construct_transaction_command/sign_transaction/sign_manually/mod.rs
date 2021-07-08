@@ -1,4 +1,3 @@
-use dialoguer::Input;
 use near_primitives::borsh::BorshSerialize;
 
 /// подписание сформированной транзакции в режиме manually
@@ -11,31 +10,54 @@ use near_primitives::borsh::BorshSerialize;
 pub struct CliSignManually {
     #[clap(long)]
     signer_public_key: Option<near_crypto::PublicKey>,
+    #[clap(long)]
+    nonce: Option<u64>,
+    #[clap(long)]
+    block_hash: Option<near_primitives::hash::CryptoHash>,
 }
 
 #[derive(Debug)]
 pub struct SignManually {
     pub signer_public_key: near_crypto::PublicKey,
+    nonce: u64,
+    block_hash: near_primitives::hash::CryptoHash,
 }
 
-impl From<CliSignManually> for SignManually {
-    fn from(item: CliSignManually) -> Self {
+impl SignManually {
+    pub fn from(
+        item: CliSignManually,
+        connection_config: Option<crate::common::ConnectionConfig>,
+    ) -> Self {
         let signer_public_key: near_crypto::PublicKey = match item.signer_public_key {
             Some(cli_public_key) => cli_public_key,
-            None => SignManually::signer_public_key(),
+            None => super::input_signer_public_key(),
         };
-        SignManually { signer_public_key }
+        match connection_config {
+            Some(_) => Self {
+                signer_public_key,
+                nonce: 0,
+                block_hash: Default::default(),
+            },
+            None => {
+                let nonce: u64 = match item.nonce {
+                    Some(cli_nonce) => cli_nonce,
+                    None => super::input_access_key_nonce(&signer_public_key.to_string()),
+                };
+                let block_hash = match item.block_hash {
+                    Some(cli_block_hash) => cli_block_hash,
+                    None => super::input_block_hash(),
+                };
+                Self {
+                    signer_public_key,
+                    nonce,
+                    block_hash,
+                }
+            }
+        }
     }
 }
 
 impl SignManually {
-    pub fn signer_public_key() -> near_crypto::PublicKey {
-        Input::new()
-            .with_prompt("To create an unsigned transaction enter sender's public key")
-            .interact_text()
-            .unwrap()
-    }
-
     fn rpc_client(self, selected_server_url: &str) -> near_jsonrpc_client::JsonRpcClient {
         near_jsonrpc_client::new_client(&selected_server_url)
     }
@@ -50,6 +72,8 @@ impl SignManually {
         let unsigned_transaction = match network_connection_config {
             None => near_primitives::transaction::Transaction {
                 public_key,
+                nonce: self.nonce.clone(),
+                block_hash: self.block_hash.clone(),
                 ..prepopulated_unsigned_transaction
             },
             Some(network_connection_config) => {
@@ -95,7 +119,7 @@ impl SignManually {
                 .expect("Transaction is not expected to fail on serialization"),
         );
         println!(
-            "---  serialize_to_base64:   --- \n   {:#?}",
+            "---  serialize_to_base64:   --- \n   {}",
             &serialize_to_base64
         );
         Ok(None)

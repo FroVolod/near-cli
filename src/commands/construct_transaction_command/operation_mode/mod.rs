@@ -21,13 +21,13 @@ pub struct OperationMode {
     pub mode: Mode,
 }
 
-impl From<CliOperationMode> for OperationMode {
-    fn from(item: CliOperationMode) -> Self {
+impl OperationMode {
+    pub fn from(item: CliOperationMode) -> color_eyre::eyre::Result<Self> {
         let mode = match item.mode {
-            Some(cli_mode) => Mode::from(cli_mode),
-            None => Mode::choose_mode(),
+            Some(cli_mode) => Mode::from(cli_mode)?,
+            None => Mode::choose_mode()?,
         };
-        Self { mode }
+        Ok(Self { mode })
     }
 }
 
@@ -43,7 +43,7 @@ impl OperationMode {
 #[derive(Debug, clap::Clap)]
 pub enum CliMode {
     /// Prepare and, optionally, submit a new transaction with online mode
-    Network(self::online_mode::CliOnlineArgs),
+    Network(self::online_mode::CliNetworkArgs),
     /// Prepare and, optionally, submit a new transaction with offline mode
     Offline(self::offline_mode::CliOfflineArgs),
 }
@@ -52,24 +52,28 @@ pub enum CliMode {
 #[strum_discriminants(derive(EnumMessage, EnumIter))]
 pub enum Mode {
     #[strum_discriminants(strum(message = "Yes, I keep it simple"))]
-    Network(self::online_mode::OnlineArgs),
+    Network(self::online_mode::NetworkArgs),
     #[strum_discriminants(strum(
         message = "No, I want to work in no-network (air-gapped) environment"
     ))]
     Offline(self::offline_mode::OfflineArgs),
 }
 
-impl From<CliMode> for Mode {
-    fn from(item: CliMode) -> Self {
+impl Mode {
+    fn from(item: CliMode) -> color_eyre::eyre::Result<Self> {
         match item {
-            CliMode::Network(cli_network_args) => Self::Network(cli_network_args.into()),
-            CliMode::Offline(cli_offline_args) => Self::Offline(cli_offline_args.into()),
+            CliMode::Network(cli_network_args) => Ok(Self::Network(
+                self::online_mode::NetworkArgs::from(cli_network_args)?,
+            )),
+            CliMode::Offline(cli_offline_args) => Ok(Self::Offline(
+                self::offline_mode::OfflineArgs::from(cli_offline_args)?,
+            )),
         }
     }
 }
 
 impl Mode {
-    pub fn choose_mode() -> Self {
+    fn choose_mode() -> color_eyre::eyre::Result<Self> {
         println!();
         let variants = ModeDiscriminants::iter().collect::<Vec<_>>();
         let modes = variants
@@ -89,7 +93,7 @@ impl Mode {
             ModeDiscriminants::Network => CliMode::Network(Default::default()),
             ModeDiscriminants::Offline => CliMode::Offline(Default::default()),
         };
-        Self::from(cli_mode)
+        Ok(Self::from(cli_mode)?)
     }
 
     pub async fn process(

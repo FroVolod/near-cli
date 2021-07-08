@@ -21,20 +21,28 @@ pub struct DeleteAccountAction {
     pub next_action: Box<super::NextAction>,
 }
 
-impl From<CliDeleteAccountAction> for DeleteAccountAction {
-    fn from(item: CliDeleteAccountAction) -> Self {
+impl DeleteAccountAction {
+    pub fn from(
+        item: CliDeleteAccountAction,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         let beneficiary_id: near_primitives::types::AccountId = match item.beneficiary_id {
             Some(cli_account_id) => cli_account_id,
             None => DeleteAccountAction::input_beneficiary_id(),
         };
         let skip_next_action: super::NextAction = match item.next_action {
-            Some(cli_skip_action) => super::NextAction::from(cli_skip_action),
-            None => super::NextAction::input_next_action(),
+            Some(cli_skip_action) => super::NextAction::from_cli_skip_next_action(
+                cli_skip_action,
+                connection_config,
+                sender_account_id,
+            )?,
+            None => super::NextAction::input_next_action(connection_config, sender_account_id)?,
         };
-        Self {
+        Ok(Self {
             beneficiary_id,
             next_action: Box::new(skip_next_action),
-        }
+        })
     }
 }
 

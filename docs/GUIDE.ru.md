@@ -10,7 +10,7 @@
 
 1. Режим _Online_ / _Offline_
 
-    Результатом работы создания любой транзакции в режиме _Offline_ (display) является подготовленная транзакция в виде Base64-закодированной строки, которую вдальнейшем можно [отправить в сеть через RPC](https://docs.near.org/docs/api/rpc#transactions). В режиме _Online_ эта возможность добавлена (send).
+    Результатом работы создания любой транзакции в режиме _Offline_ (display) является подготовленная транзакция в виде Base64-закодированной строки, которую в дальнейшем можно [отправить в сеть через RPC](https://docs.near.org/docs/api/rpc#transactions). В режиме _Online_ эта возможность добавлена (send).
     Также _Online_-режим обеспечивает автоматический сбор данных, необходимых для формирования и отправки транзакции, а в режиме _Offline_ нужно будет ввести некоторые показатели вручную:
 
       * _transaction nonce_
@@ -21,16 +21,16 @@
 
         Информацию для этого параметра нужно искать [здесь](https://explorer.testnet.near.org/blocks) либо получить при помощи [View recent block hash](#view-recent-block-hash)
 
-    <details><summary><i>recent block hash</i></summary>
-        <img src="media/blocks.png" width="836"/>
-        <img src="media/block_hash.png" width="836"/>
-    </details>
+        <details><summary><i>recent block hash</i></summary>
+            <img src="media/blocks.png" width="836"/>
+            <img src="media/block_hash.png" width="836"/>
+        </details>
 
-    <details><summary><i>Демонстрация работы _Offline_ режима</i></summary>
-    <a href="https://asciinema.org/a/REcIXg1yQqLpz42EzNQt8B99f?autoplay=1&t=1&speed=2">
-        <img src="https://asciinema.org/a/REcIXg1yQqLpz42EzNQt8B99f.png" width="836"/>
-    </a>
-    </details>
+        <details><summary><i>Демонстрация работы Offline режима</i></summary>
+        <a href="https://asciinema.org/a/HKHhY6u4mbOF1cIGDI3xbSm27?autoplay=1&t=1&speed=2">
+            <img src="https://asciinema.org/a/HKHhY6u4mbOF1cIGDI3xbSm27.png" width="836"/>
+        </a>
+        </details>
 
 2. Подпись транзакции
 
@@ -44,13 +44,25 @@
 
       * _I want to sign the transaction with keychain_
         
-        При выборе этого варианта подписи near-cli самостоятельно найдет ключи доступа в файле *имя_пользователя.json*, расположенного в */Users/user/.near-credentials/default/*.  
-        Например, */Users/frovolod/.near-credentials/default/volodymyr.testnet.json*.
+        В зависимости от выбранного режима сети _Online_ / _Offline_ near-cli самостоятельно найдет ключи доступа и подпишет созданную транзакцию.  
+        Для режима _Offline_ ключи доступа должны находиться в файле *имя_пользователя.json*, расположенном в */Users/user/.near-credentials/default/*.  
+        Например, */Users/frovolod/.near-credentials/default/volodymyr.testnet.json*.  
+        Для режима _Online_ ключи доступа должны находиться в файле *публичный_ключ.json*, расположенном в */Users/user/.near-credentials/имя_сети/имя_пользователя/*.  
+        Например, */Users/frovolod/.near-credentials/testnet/volodymyr.testnet/ed25519_8h7kFK4quSUJRkUwo3LLiK83sraEm2jnQTECuZhWu8HC.json*
+
+      * _I want to sign the transaction with Ledger device_
+        
+        Этот вариант предполагает подписание созданной транзакции при помощи леджера.
+
+        <details><summary><i>Демонстрация работы команды в интерактивном режиме</i></summary>
+        <a href="https://asciinema.org/a/7WyNHxSCKY1v6uOa5INPvXW9x?autoplay=1&t=1&speed=2">
+            <img src="https://asciinema.org/a/7WyNHxSCKY1v6uOa5INPvXW9x.png" width="836"/>
+        </a>
+        </details>
 
       * _I want to construct the transaction and sign it somewhere else_
         
         Этот вариант предполагает подписание созданной транзакции сторонним программным продуктом.
-
 
 ### Группы команд
 
@@ -406,19 +418,12 @@ recent block hash: `CDgRvkv2qv2c8e5m2WDKFUFqAtXrq2fiUteM6XHpy58t`
 <details><summary><i>Результат выполнения команды</i></summary>
 
 ```txt
---- Transaction sent ---
-
-
---- Transaction execution: ---
-
-
+Transaction sent ...
+Successful transaction
 <volodymyr.testnet> has transferred 1.000 NEAR to <21.volodymyr.testnet> successfully.
-
-Transaction Id 3Xw8R58BTmoRrJufpy5utej8MzNuA11Zw6pnS8vUcCNG.
-
+Transaction ID: EiRJ7JCCX7qi9wc9KETnco2n81afU1xbsjyJCuH5SWcX.
 To see the transaction in the transaction explorer, please open this url in your browser:
-                    
-https://explorer.wallet.testnet.near.org/3Xw8R58BTmoRrJufpy5utej8MzNuA11Zw6pnS8vUcCNG
+https://explorer.testnet.near.org/transactions/EiRJ7JCCX7qi9wc9KETnco2n81afU1xbsjyJCuH5SWcX
 ```
 </details>
 
@@ -449,19 +454,12 @@ https://explorer.wallet.testnet.near.org/3Xw8R58BTmoRrJufpy5utej8MzNuA11Zw6pnS8v
 <details><summary><i>Результат выполнения команды</i></summary>
 
 ```txt
---- Transaction sent ---
-
-
---- Transaction execution: ---
-
-
+Transaction sent ...
+Successful transaction
 The "distribute_staking" call to <meta.pool.testnet> on behalf of <volodymyr.testnet> succeeded.
-
-Transaction Id CK4ZT2NfJhqfQAjVsvoTuyJs74SY4DQfgwKC79tZGEfw.
-
+Transaction ID: 7TpFFVBs9CXYoRpRtZqMuLAWnGbgx3qyRy9jhawv8HqX.
 To see the transaction in the transaction explorer, please open this url in your browser:
-                    
-https://explorer.wallet.testnet.near.org/CK4ZT2NfJhqfQAjVsvoTuyJs74SY4DQfgwKC79tZGEfw
+https://explorer.testnet.near.org/transactions/7TpFFVBs9CXYoRpRtZqMuLAWnGbgx3qyRy9jhawv8HqX
 ```
 </details>
 
@@ -531,7 +529,7 @@ https://explorer.wallet.testnet.near.org/CK4ZT2NfJhqfQAjVsvoTuyJs74SY4DQfgwKC79t
 ./near-cli add access-key \
         network testnet \
         account 'volodymyr.testnet' \
-        public-key 'ed25519:Ebx7...' \
+        public-key 'ed25519:61WaaKFEXTvhk35xmyScVE9yHc5DareBvomLYbCYteb' \
         grant-full-access \
         sign-with-keychain \
         send
@@ -540,18 +538,12 @@ https://explorer.wallet.testnet.near.org/CK4ZT2NfJhqfQAjVsvoTuyJs74SY4DQfgwKC79t
 <details><summary><i>Результат выполнения команды</i></summary>
 
 ```txt
---- Transaction sent ---
-
-
---- Transaction execution: ---
-
-Added full access key = ed25519:2Xh8n53G5YCjEj6eangH6PZjf2YdfogxikMV6q6MxFRH to volodymyr.testnet.
-
-Transaction Id Am9bmTSaaG1SoDU2m1MyXz3cbU4uY2XxghxeHGkeBX4x.
-
+Transaction sent ...
+Successful transaction
+Added access key = ed25519:61WaaKFEXTvhk35xmyScVE9yHc5DareBvomLYbCYteb to volodymyr.testnet.
+Transaction ID: 59LEJEQT7jVMXdVi3ab4y8nbQ7uFJ8wRny9tD3qkv5Ez.
 To see the transaction in the transaction explorer, please open this url in your browser:
-                    
-https://explorer.wallet.testnet.near.org/Am9bmTSaaG1SoDU2m1MyXz3cbU4uY2XxghxeHGkeBX4x
+https://explorer.testnet.near.org/transactions/59LEJEQT7jVMXdVi3ab4y8nbQ7uFJ8wRny9tD3qkv5Ez
 ```
 </details>
 
@@ -586,18 +578,12 @@ https://explorer.wallet.testnet.near.org/Am9bmTSaaG1SoDU2m1MyXz3cbU4uY2XxghxeHGk
 <details><summary><i>Результат выполнения команды</i></summary>
 
 ```txt
---- Transaction sent ---
-
-
---- Transaction execution: ---
-
-Added function access key = ed25519:ECPLXJyLv3emQ9g76fxUHM98hP5MkXD5mcyRe6KiqGK2 to 21.volodymyr.testnet.
-
-Transaction Id PTab8ENhtLJfNqsUwVpiPw3sLPySwpzJuSNX9yEHhLD.
-
+Transaction sent ...
+Successful transaction
+Added access key = ed25519:H8pzJt6RHCtVL7THc2AW5KwTXUtVhDCRocHqapfH5L47 to 21.volodymyr.testnet.
+Transaction ID: 92y4UzovU4vgfKRVBmLR15M6mYPGp1y2za6HKXXsjF1H.
 To see the transaction in the transaction explorer, please open this url in your browser:
-                    
-https://explorer.testnet.near.org/transactions/PTab8ENhtLJfNqsUwVpiPw3sLPySwpzJuSNX9yEHhLD
+https://explorer.testnet.near.org/transactions/92y4UzovU4vgfKRVBmLR15M6mYPGp1y2za6HKXXsjF1H
 ```
 </details>
 
@@ -625,19 +611,13 @@ https://explorer.testnet.near.org/transactions/PTab8ENhtLJfNqsUwVpiPw3sLPySwpzJu
 <details><summary><i>Результат выполнения команды</i></summary>
 
 ```txt
---- Transaction sent ---
-
-
---- Transaction execution: ---
-
-
- Contract code "/Users/frovolod/Documents/NEAR/rust-counter/contract/target/wasm32-unknown-unknown/release/rust_counter_tutorial.wasm" has been successfully deployed.
-
-Transaction Id 2p8VM2bWpdXeQKeTufgYFRYgvk93ZuriHxLJHwT4cxiQ.
-
+Transaction sent ...
+Successful transaction
+Contract code has been successfully deployed.
+The "increment" call to <volodymyr.testnet> on behalf of <volodymyr.testnet> succeeded.
+Transaction ID: AhJ2fRAu6ocn3RDaKaCtofzfhr5C1z4wXEZDbrhewm4.
 To see the transaction in the transaction explorer, please open this url in your browser:
-                    
-https://explorer.wallet.testnet.near.org/2p8VM2bWpdXeQKeTufgYFRYgvk93ZuriHxLJHwT4cxiQ
+https://explorer.testnet.near.org/transactions/AhJ2fRAu6ocn3RDaKaCtofzfhr5C1z4wXEZDbrhewm4
 ```
 </details>
 
@@ -685,19 +665,13 @@ The data for the access key is saved in a file /Users/frovolod/.near-credentials
 <details><summary><i>Результат выполнения команды</i></summary>
 
 ```txt
---- Transaction sent ---
-
-
---- Transaction execution: ---
-
+Transaction sent ...
+Failed transaction
 Error: Insufficient stake 100.000 NEAR.
-The minimum rate must be 28626.505 NEAR.
-
-Transaction Id 92TdRcwGXyVCgMniE1aX8kWTzBB58s9Y5i8dHAnh74Y8.
-
+The minimum rate must be 31097.761 NEAR.
+Transaction ID: 8m2NphgJfvY4u4kWt7ntaZmXt6CrqXuq44VVZoDMUATo.
 To see the transaction in the transaction explorer, please open this url in your browser:
-                    
-https://explorer.wallet.testnet.near.org/92TdRcwGXyVCgMniE1aX8kWTzBB58s9Y5i8dHAnh74Y8
+https://explorer.testnet.near.org/transactions/8m2NphgJfvY4u4kWt7ntaZmXt6CrqXuq44VVZoDMUATo
 ```
 </details>
 
@@ -714,7 +688,7 @@ https://explorer.wallet.testnet.near.org/92TdRcwGXyVCgMniE1aX8kWTzBB58s9Y5i8dHAn
 ./near-cli add sub-account \
         network testnet \
         owner-account 'volodymyr.testnet' \
-        sub-account '22.volodymyr.testnet' \
+        sub-account '282.volodymyr.testnet' \
         sub-account-full-access \
         generate-keypair \
         deposit '1 NEAR' \
@@ -725,19 +699,14 @@ https://explorer.wallet.testnet.near.org/92TdRcwGXyVCgMniE1aX8kWTzBB58s9Y5i8dHAn
 <details><summary><i>Результат выполнения команды</i></summary>
 
 ```txt
---- Transaction sent ---
-
-
---- Transaction execution: ---
-
-
-New account <22.volodymyr.testnet> has been successfully created.
-
-Transaction Id He1D8DoYEkazhVw5PJ4TxNgafmsqj7Yb72YQebM3a98p.
-
+Transaction sent ...
+Successful transaction
+New account <282.volodymyr.testnet> has been successfully created.
+Added access key = ed25519:512RGPTghPXSNziZRUi9K7UzMHiAwEetL5FpmZw6zdHd to 282.volodymyr.testnet.
+<volodymyr.testnet> has transferred 1.000 NEAR to <282.volodymyr.testnet> successfully.
+Transaction ID: 24a5rxkH4gLus4YBqm47JRNygbZEKLgiJVCZFx3Hcjqp.
 To see the transaction in the transaction explorer, please open this url in your browser:
-                    
-https://explorer.wallet.testnet.near.org/He1D8DoYEkazhVw5PJ4TxNgafmsqj7Yb72YQebM3a98p
+https://explorer.testnet.near.org/transactions/24a5rxkH4gLus4YBqm47JRNygbZEKLgiJVCZFx3Hcjqp
 ```
 </details>
 
@@ -757,7 +726,7 @@ https://explorer.wallet.testnet.near.org/He1D8DoYEkazhVw5PJ4TxNgafmsqj7Yb72YQebM
 ./near-cli delete access-key \
         network testnet \
         account 'volodymyr.testnet' \
-        public-key 'ed25519:HaUQJkxYtTXrJVLNHEtHPmvLJ1fuUczwocm53Xn5eFJy' \
+        public-key 'ed25519:Ekgny2BNdwaoRuNW2JBkSv6FGDjmrd5iP8noXE4dTUk2' \
         sign-with-keychain \
         send
 ```
@@ -765,19 +734,12 @@ https://explorer.wallet.testnet.near.org/He1D8DoYEkazhVw5PJ4TxNgafmsqj7Yb72YQebM
 <details><summary><i>Результат выполнения команды</i></summary>
 
 ```txt
---- Transaction sent ---
-
-
---- Transaction execution: ---
-
-
-Access key <ed25519:HaUQJkxYtTXrJVLNHEtHPmvLJ1fuUczwocm53Xn5eFJy> for account <volodymyr.testnet> has been successfully deletted.
-
-Transaction Id 6Du4cGn1go9EQdrsRzD6D2az4jGGQUW9361cLG1GVxNp.
-
+Transaction sent ...
+Successful transaction
+Access key <ed25519:Ekgny2BNdwaoRuNW2JBkSv6FGDjmrd5iP8noXE4dTUk2> for account <volodymyr.testnet> has been successfully deletted.
+Transaction ID: 9xeBgqpRButrSGZNUGcYbsxs2JM3A9NoH7Bkh6op4K8D.
 To see the transaction in the transaction explorer, please open this url in your browser:
-                    
-https://explorer.wallet.testnet.near.org/6Du4cGn1go9EQdrsRzD6D2az4jGGQUW9361cLG1GVxNp
+https://explorer.testnet.near.org/transactions/9xeBgqpRButrSGZNUGcYbsxs2JM3A9NoH7Bkh6op4K8D
 ```
 </details>
 
@@ -794,7 +756,7 @@ https://explorer.wallet.testnet.near.org/6Du4cGn1go9EQdrsRzD6D2az4jGGQUW9361cLG1
 ```txt
 ./near-cli delete account \
         network testnet \
-        account '22.volodymyr.testnet' \
+        account '282.volodymyr.testnet' \
         beneficiary 'volodymyr.testnet' \
         sign-with-keychain \
         send
@@ -803,19 +765,12 @@ https://explorer.wallet.testnet.near.org/6Du4cGn1go9EQdrsRzD6D2az4jGGQUW9361cLG1
 <details><summary><i>Результат выполнения команды</i></summary>
 
 ```txt
---- Transaction sent ---
-
-
---- Transaction execution: ---
-
-
-Account <22.volodymyr.testnet> has been successfully deletted.
-
-Transaction Id EhhLMtUEmLHV4bzdvSmzv9pLyUbKChGgtWKhuPRXx2w5.
-
+Transaction sent ...
+Successful transaction
+Account <282.volodymyr.testnet> has been successfully deletted.
+Transaction ID: CfRvfMvEY7vtKM2ub18nKsMivNo95wUC5VYYQ64gcPm.
 To see the transaction in the transaction explorer, please open this url in your browser:
-                    
-https://explorer.wallet.testnet.near.org/EhhLMtUEmLHV4bzdvSmzv9pLyUbKChGgtWKhuPRXx2w5
+https://explorer.testnet.near.org/transactions/CfRvfMvEY7vtKM2ub18nKsMivNo95wUC5VYYQ64gcPm
 ```
 </details>
 
@@ -859,6 +814,16 @@ https://explorer.wallet.testnet.near.org/EhhLMtUEmLHV4bzdvSmzv9pLyUbKChGgtWKhuPR
 <details><summary><i>Демонстрация работы команды в интерактивном режиме</i></summary>
 <a href="https://asciinema.org/a/sjS78AfPfwltNge2Yb9uRCxSX?autoplay=1&t=1&speed=2">
     <img src="https://asciinema.org/a/sjS78AfPfwltNge2Yb9uRCxSX.png" width="836"/>
+</a>
+</details>
+
+#### Sign a transaction with Ledger
+
+Данныя утилита позволяет подписать ранее сформированную и неподписанную транзакцию при помощи леджера. Предполагается, что леджер подключен к компьютеру, 
+разблокирован и на нем запущено приложение _NEAR_.
+<details><summary><i>Демонстрация работы команды в интерактивном режиме</i></summary>
+<a href="https://asciinema.org/a/G96fR2Ap9qdImtn2ITUJL82RR?autoplay=1&t=1&speed=2">
+    <img src="https://asciinema.org/a/G96fR2Ap9qdImtn2ITUJL82RR.png" width="836"/>
 </a>
 </details>
 

@@ -17,15 +17,26 @@ pub struct FullAccessType {
     pub next_action: Box<super::super::super::NextAction>,
 }
 
-impl From<CliFullAccessType> for FullAccessType {
-    fn from(item: CliFullAccessType) -> Self {
+impl FullAccessType {
+    pub fn from(
+        item: CliFullAccessType,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         let skip_next_action: super::super::super::NextAction = match item.next_action {
-            Some(cli_skip_action) => super::super::super::NextAction::from(cli_skip_action),
-            None => super::super::super::NextAction::input_next_action(),
+            Some(cli_skip_action) => super::super::super::NextAction::from_cli_skip_next_action(
+                cli_skip_action,
+                connection_config,
+                sender_account_id,
+            )?,
+            None => super::super::super::NextAction::input_next_action(
+                connection_config,
+                sender_account_id,
+            )?,
         };
-        Self {
+        Ok(Self {
             next_action: Box::new(skip_next_action),
-        }
+        })
     }
 }
 

@@ -30,8 +30,12 @@ pub struct CallFunctionAction {
     next_action: Box<super::NextAction>,
 }
 
-impl From<CliCallFunctionAction> for CallFunctionAction {
-    fn from(item: CliCallFunctionAction) -> Self {
+impl CallFunctionAction {
+    pub fn from(
+        item: CliCallFunctionAction,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         let method_name: String = match item.method_name {
             Some(cli_method_name) => cli_method_name,
             None => CallFunctionAction::input_method_name(),
@@ -51,16 +55,20 @@ impl From<CliCallFunctionAction> for CallFunctionAction {
             None => CallFunctionAction::input_deposit(),
         };
         let skip_next_action: super::NextAction = match item.next_action {
-            Some(cli_skip_action) => super::NextAction::from(cli_skip_action),
-            None => super::NextAction::input_next_action(),
+            Some(cli_skip_action) => super::NextAction::from_cli_skip_next_action(
+                cli_skip_action,
+                connection_config,
+                sender_account_id,
+            )?,
+            None => super::NextAction::input_next_action(connection_config, sender_account_id)?,
         };
-        Self {
+        Ok(Self {
             method_name,
             args,
             gas,
             deposit,
             next_action: Box::new(skip_next_action),
-        }
+        })
     }
 }
 

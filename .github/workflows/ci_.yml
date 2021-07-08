@@ -120,13 +120,19 @@ jobs:
     - name: Build near-cli and all crates
       run: ${{ env.CARGO }} build --verbose --all ${{ env.TARGET_FLAGS }}
 
-    - name: View contract code for 'volodymyr.testnet'
-      run: |
-        ./target/debug/near-cli view contract-code network testnet contract 'volodymyr.testnet' hash at-final-block
-
     - name: Run tests (sans cross)
       if: matrix.target == ''
       run: ${{ env.CARGO }} test --verbose --all
+    
+    - name: View contract code for 'volodymyr.testnet'
+      run: |
+        ./target/debug/near-cli view contract-code network testnet contract 'volodymyr.testnet' hash at-final-block
+    
+    - name: Transfer NEAR Tokens
+      run: |
+        ./target/debug/near-cli transfer near network testnet sender volodymyr.testnet receiver 21.volodymyr.testnet \
+        amount 0.001NEAR sign-private-key --signer-public-key ed25519:Ebx7NiwqupsshnUsEZCzgm84SQqi8LZWJx7ermrr14JF \
+        --signer-secret-key ed25519:2qM8v3nF4opam1frweMmD5h4PM3H6jtxfuAE77rpEuUx2rSGj64AzDf9xPKG76bgAs5L1oecV93etPy6xKjds2YB send
     # - name: Run tests without PCRE2 (with cross)
     #   # These tests should actually work, but they almost double the runtime.
     #   # Every integration test spins up qemu to run 'rg', and when PCRE2 is

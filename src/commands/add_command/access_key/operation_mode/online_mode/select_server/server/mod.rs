@@ -15,13 +15,9 @@ pub struct CliServer {
 /// данные для custom server
 #[derive(Debug, Default, clap::Clap)]
 #[clap(
-    // version,
-    author,
-    // about,
     setting(clap::AppSettings::ColoredHelp),
     setting(clap::AppSettings::DisableHelpSubcommand),
-    setting(clap::AppSettings::VersionlessSubcommands),
-    // setting(clap::AppSettings::NextLineHelp)
+    setting(clap::AppSettings::VersionlessSubcommands)
 )]
 pub struct CliCustomServer {
     #[clap(long)]
@@ -32,25 +28,28 @@ pub struct CliCustomServer {
 
 #[derive(Debug)]
 pub struct Server {
-    pub network_connection_config: Option<crate::common::ConnectionConfig>,
+    pub connection_config: Option<crate::common::ConnectionConfig>,
     pub send_from: SendFrom,
 }
 
 impl CliServer {
-    pub fn into_server(self, network_connection_config: crate::common::ConnectionConfig) -> Server {
+    pub fn into_server(
+        self,
+        connection_config: crate::common::ConnectionConfig,
+    ) -> color_eyre::eyre::Result<Server> {
         let send_from = match self.send_from {
-            Some(cli_send_from) => SendFrom::from(cli_send_from),
-            None => SendFrom::choose_send_from(),
+            Some(cli_send_from) => SendFrom::from(cli_send_from, Some(connection_config.clone()))?,
+            None => SendFrom::choose_send_from(Some(connection_config.clone()))?,
         };
-        Server {
-            network_connection_config: Some(network_connection_config),
+        Ok(Server {
+            connection_config: Some(connection_config),
             send_from,
-        }
+        })
     }
 }
 
 impl CliCustomServer {
-    pub fn into_server(self) -> Server {
+    pub fn into_server(self) -> color_eyre::eyre::Result<Server> {
         let url: crate::common::AvailableRpcServerUrl = match self.url {
             Some(url) => url,
             None => Input::new()
@@ -58,16 +57,17 @@ impl CliCustomServer {
                 .interact_text()
                 .unwrap(),
         };
+        let connection_config = Some(crate::common::ConnectionConfig::Custom {
+            url: url.inner.clone(),
+        });
         let send_from = match self.send_from {
-            Some(cli_send_from) => SendFrom::from(cli_send_from),
-            None => SendFrom::choose_send_from(),
+            Some(cli_send_from) => SendFrom::from(cli_send_from, connection_config.clone())?,
+            None => SendFrom::choose_send_from(connection_config.clone())?,
         };
-        Server {
-            network_connection_config: Some(crate::common::ConnectionConfig::Custom {
-                url: url.inner,
-            }),
+        Ok(Server {
+            connection_config,
             send_from,
-        }
+        })
     }
 }
 
@@ -77,10 +77,7 @@ impl Server {
         prepopulated_unsigned_transaction: near_primitives::transaction::Transaction,
     ) -> crate::CliResult {
         self.send_from
-            .process(
-                prepopulated_unsigned_transaction,
-                self.network_connection_config,
-            )
+            .process(prepopulated_unsigned_transaction, self.connection_config)
             .await
     }
 }
@@ -96,17 +93,24 @@ pub enum SendFrom {
     Account(super::super::super::super::sender::Sender),
 }
 
-impl From<CliSendFrom> for SendFrom {
-    fn from(item: CliSendFrom) -> Self {
+impl SendFrom {
+    pub fn from(
+        item: CliSendFrom,
+        connection_config: Option<crate::common::ConnectionConfig>,
+    ) -> color_eyre::eyre::Result<Self> {
         match item {
-            CliSendFrom::Account(cli_sender) => Self::Account(cli_sender.into()),
+            CliSendFrom::Account(cli_sender) => Ok(Self::Account(
+                super::super::super::super::sender::Sender::from(cli_sender, connection_config)?,
+            )),
         }
     }
 }
 
 impl SendFrom {
-    pub fn choose_send_from() -> Self {
-        Self::from(CliSendFrom::Account(Default::default()))
+    pub fn choose_send_from(
+        connection_config: Option<crate::common::ConnectionConfig>,
+    ) -> color_eyre::eyre::Result<Self> {
+        Self::from(CliSendFrom::Account(Default::default()), connection_config)
     }
 
     pub async fn process(

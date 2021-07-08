@@ -28,46 +28,27 @@ pub enum SelectServer {
     Custom(self::server::Server),
 }
 
-// #[derive(Debug)]
-// pub enum ConnectionConfig {
-//     Testnet,
-//     Mainnet,
-//     Betanet,
-//     Custom { url: url::Url },
-// }
-
-// impl ConnectionConfig {
-//     pub fn rpc_url(&self) -> url::Url {
-//         match self {
-//             Self::Testnet => crate::consts::TESTNET_API_SERVER_URL.parse().unwrap(),
-//             Self::Mainnet => crate::consts::MAINNET_API_SERVER_URL.parse().unwrap(),
-//             Self::Betanet => crate::consts::BETANET_API_SERVER_URL.parse().unwrap(),
-//             Self::Custom { url } => url.clone(),
-//         }
-//     }
-// }
-
-impl From<CliSelectServer> for SelectServer {
-    fn from(item: CliSelectServer) -> Self {
+impl SelectServer {
+    pub fn from(item: CliSelectServer) -> color_eyre::eyre::Result<Self> {
         match item {
-            CliSelectServer::Testnet(cli_server) => {
-                Self::Testnet(cli_server.into_server(crate::common::ConnectionConfig::Testnet))
-            }
-            CliSelectServer::Mainnet(cli_server) => {
-                Self::Mainnet(cli_server.into_server(crate::common::ConnectionConfig::Mainnet))
-            }
-            CliSelectServer::Betanet(cli_server) => {
-                Self::Betanet(cli_server.into_server(crate::common::ConnectionConfig::Betanet))
-            }
+            CliSelectServer::Testnet(cli_server) => Ok(Self::Testnet(
+                cli_server.into_server(crate::common::ConnectionConfig::Testnet)?,
+            )),
+            CliSelectServer::Mainnet(cli_server) => Ok(Self::Mainnet(
+                cli_server.into_server(crate::common::ConnectionConfig::Mainnet)?,
+            )),
+            CliSelectServer::Betanet(cli_server) => Ok(Self::Betanet(
+                cli_server.into_server(crate::common::ConnectionConfig::Betanet)?,
+            )),
             CliSelectServer::Custom(cli_custom_server) => {
-                Self::Custom(cli_custom_server.into_server())
+                Ok(Self::Custom(cli_custom_server.into_server()?))
             }
         }
     }
 }
 
 impl SelectServer {
-    pub fn choose_server() -> Self {
+    pub fn choose_server() -> color_eyre::eyre::Result<Self> {
         println!();
         let variants = SelectServerDiscriminants::iter().collect::<Vec<_>>();
         let servers = variants
@@ -86,7 +67,7 @@ impl SelectServer {
             SelectServerDiscriminants::Betanet => CliSelectServer::Betanet(Default::default()),
             SelectServerDiscriminants::Custom => CliSelectServer::Custom(Default::default()),
         };
-        Self::from(cli_select_server)
+        Ok(Self::from(cli_select_server)?)
     }
 
     pub async fn process(

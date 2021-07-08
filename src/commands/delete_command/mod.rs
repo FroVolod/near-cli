@@ -21,13 +21,13 @@ pub struct DeleteAction {
     pub action: Action,
 }
 
-impl From<CliDeleteAction> for DeleteAction {
-    fn from(item: CliDeleteAction) -> Self {
+impl DeleteAction {
+    pub fn from(item: CliDeleteAction) -> color_eyre::eyre::Result<Self> {
         let action = match item.action {
-            Some(cli_action) => cli_action.into(),
-            None => Action::choose_action(),
+            Some(cli_action) => Action::from(cli_action)?,
+            None => Action::choose_action()?,
         };
-        Self { action }
+        Ok(Self { action })
     }
 }
 
@@ -46,8 +46,6 @@ pub enum CliAction {
     AccessKey(self::access_key::operation_mode::CliOperationMode),
     /// Delete this account
     Account(self::account::operation_mode::CliOperationMode),
-    // /// Add a new sub-account
-    // SubAccount,
 }
 
 #[derive(Debug, EnumDiscriminants)]
@@ -57,22 +55,23 @@ pub enum Action {
     AccessKey(self::access_key::operation_mode::OperationMode),
     #[strum_discriminants(strum(message = "Delete this account"))]
     Account(self::account::operation_mode::OperationMode),
-    // SubAccount,
 }
 
-impl From<CliAction> for Action {
-    fn from(item: CliAction) -> Self {
+impl Action {
+    fn from(item: CliAction) -> color_eyre::eyre::Result<Self> {
         match item {
-            CliAction::AccessKey(cli_operation_mode) => {
-                Action::AccessKey(cli_operation_mode.into())
-            }
-            CliAction::Account(cli_operation_mode) => Action::Account(cli_operation_mode.into()),
+            CliAction::AccessKey(cli_operation_mode) => Ok(Action::AccessKey(
+                self::access_key::operation_mode::OperationMode::from(cli_operation_mode).unwrap(),
+            )),
+            CliAction::Account(cli_operation_mode) => Ok(Action::Account(
+                self::account::operation_mode::OperationMode::from(cli_operation_mode).unwrap(),
+            )),
         }
     }
 }
 
 impl Action {
-    fn choose_action() -> Self {
+    fn choose_action() -> color_eyre::eyre::Result<Self> {
         println!();
         let variants = ActionDiscriminants::iter().collect::<Vec<_>>();
         let actions = variants
@@ -89,7 +88,7 @@ impl Action {
             ActionDiscriminants::AccessKey => CliAction::AccessKey(Default::default()),
             ActionDiscriminants::Account => CliAction::Account(Default::default()),
         };
-        Self::from(cli_action)
+        Ok(Self::from(cli_action)?)
     }
 
     pub async fn process(

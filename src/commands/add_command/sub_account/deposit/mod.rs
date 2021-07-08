@@ -11,19 +11,34 @@ pub enum Deposit {
     Deposit(TransferNEARTokensAction),
 }
 
-impl From<CliDeposit> for Deposit {
-    fn from(item: CliDeposit) -> Self {
+impl Deposit {
+    pub fn from(
+        item: CliDeposit,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         match item {
             CliDeposit::Deposit(cli_transfer_near_action) => {
-                Self::Deposit(cli_transfer_near_action.into())
+                Ok(Self::Deposit(TransferNEARTokensAction::from(
+                    cli_transfer_near_action,
+                    connection_config,
+                    sender_account_id,
+                )?))
             }
         }
     }
 }
 
 impl Deposit {
-    pub fn choose_deposit() -> Self {
-        Self::from(CliDeposit::Deposit(Default::default()))
+    pub fn choose_deposit(
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
+        Ok(Self::from(
+            CliDeposit::Deposit(Default::default()),
+            connection_config,
+            sender_account_id,
+        )?)
     }
 
     pub async fn process(
@@ -63,25 +78,29 @@ pub struct TransferNEARTokensAction {
         crate::commands::construct_transaction_command::sign_transaction::SignTransaction,
 }
 
-impl From<CliTransferNEARTokensAction> for TransferNEARTokensAction {
-    fn from(item: CliTransferNEARTokensAction) -> Self {
+impl TransferNEARTokensAction {
+    fn from(
+        item: CliTransferNEARTokensAction,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         let amount: crate::common::NearBalance = match item.amount {
             Some(cli_amount) => cli_amount,
             None => TransferNEARTokensAction::input_amount(),
         };
         let sign_option = match item.sign_option {
-            Some(cli_sign_transaction) => cli_sign_transaction.into(),
-            None => crate::commands::construct_transaction_command::sign_transaction::SignTransaction::choose_sign_option(),
+            Some(cli_sign_transaction) => crate::commands::construct_transaction_command::sign_transaction::SignTransaction::from(cli_sign_transaction, connection_config, sender_account_id)?,
+            None => crate::commands::construct_transaction_command::sign_transaction::SignTransaction::choose_sign_option(connection_config, sender_account_id)?,
         };
-        Self {
+        Ok(Self {
             amount,
             sign_option,
-        }
+        })
     }
 }
 
 impl TransferNEARTokensAction {
-    pub fn input_amount() -> crate::common::NearBalance {
+    fn input_amount() -> crate::common::NearBalance {
         Input::new()
             .with_prompt("How many NEAR Tokens do you want to deposit? (example: 10NEAR or 0.5near or 10000yoctonear)")
             .interact_text()

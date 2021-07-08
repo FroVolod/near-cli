@@ -18,13 +18,24 @@ pub struct GenerateKeypair {
     pub deposit: super::super::super::deposit::Deposit,
 }
 
-impl From<CliGenerateKeypair> for GenerateKeypair {
-    fn from(item: CliGenerateKeypair) -> Self {
+impl GenerateKeypair {
+    pub fn from(
+        item: CliGenerateKeypair,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         let deposit = match item.deposit {
-            Some(cli_deposit) => super::super::super::deposit::Deposit::from(cli_deposit),
-            None => super::super::super::deposit::Deposit::choose_deposit(),
+            Some(cli_deposit) => super::super::super::deposit::Deposit::from(
+                cli_deposit,
+                connection_config,
+                sender_account_id,
+            )?,
+            None => super::super::super::deposit::Deposit::choose_deposit(
+                connection_config,
+                sender_account_id,
+            )?,
         };
-        Self { deposit }
+        Ok(Self { deposit })
     }
 }
 

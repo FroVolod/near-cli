@@ -30,8 +30,12 @@ pub struct FunctionCallType {
         crate::commands::construct_transaction_command::sign_transaction::SignTransaction,
 }
 
-impl From<CliFunctionCallType> for FunctionCallType {
-    fn from(item: CliFunctionCallType) -> Self {
+impl FunctionCallType {
+    pub fn from(
+        item: CliFunctionCallType,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         let allowance: Option<near_primitives::types::Balance> = match item.allowance {
             Some(cli_allowance) => Some(cli_allowance.to_yoctonear()),
             None => FunctionCallType::input_allowance(),
@@ -54,15 +58,15 @@ impl From<CliFunctionCallType> for FunctionCallType {
             None => FunctionCallType::input_method_names(),
         };
         let sign_option = match item.sign_option {
-            Some(cli_sign_transaction) => cli_sign_transaction.into(),
-            None => crate::commands::construct_transaction_command::sign_transaction::SignTransaction::choose_sign_option(),
+            Some(cli_sign_transaction) => crate::commands::construct_transaction_command::sign_transaction::SignTransaction::from(cli_sign_transaction, connection_config, sender_account_id)?,
+            None => crate::commands::construct_transaction_command::sign_transaction::SignTransaction::choose_sign_option(connection_config, sender_account_id)?,
         };
-        Self {
+        Ok(Self {
             allowance,
             receiver_id,
             method_names,
             sign_option,
-        }
+        })
     }
 }
 

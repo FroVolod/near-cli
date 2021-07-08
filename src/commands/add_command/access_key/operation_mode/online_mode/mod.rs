@@ -17,15 +17,15 @@ pub struct NetworkArgs {
     selected_server: self::select_server::SelectServer,
 }
 
-impl From<CliNetworkArgs> for NetworkArgs {
-    fn from(item: CliNetworkArgs) -> Self {
+impl NetworkArgs {
+    pub fn from(item: CliNetworkArgs) -> color_eyre::eyre::Result<Self> {
         let selected_server = match item.selected_server {
             Some(cli_selected_server) => {
-                self::select_server::SelectServer::from(cli_selected_server)
+                self::select_server::SelectServer::from(cli_selected_server)?
             }
-            None => self::select_server::SelectServer::choose_server(),
+            None => self::select_server::SelectServer::choose_server()?,
         };
-        Self { selected_server }
+        Ok(Self { selected_server })
     }
 }
 

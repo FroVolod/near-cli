@@ -32,42 +32,56 @@ pub enum NextAction {
     Skip(SkipAction),
 }
 
-impl From<CliNextAction> for NextAction {
-    fn from(item: CliNextAction) -> Self {
+impl NextAction {
+    pub fn from_cli_next_action(
+        item: CliNextAction,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         match item {
             CliNextAction::AddAction(cli_select_action) => {
-                let select_action: SelectAction = SelectAction::from(cli_select_action);
-                Self::AddAction(select_action)
+                let select_action: SelectAction =
+                    SelectAction::from(cli_select_action, connection_config, sender_account_id)?;
+                Ok(Self::AddAction(select_action))
             }
             CliNextAction::Skip(cli_skip_action) => {
-                let skip_action: SkipAction = SkipAction::from(cli_skip_action);
-                Self::Skip(skip_action)
+                let skip_action: SkipAction =
+                    SkipAction::from(cli_skip_action, connection_config, sender_account_id)?;
+                Ok(Self::Skip(skip_action))
             }
-        }
-    }
-}
-
-impl From<CliSkipNextAction> for NextAction {
-    fn from(item: CliSkipNextAction) -> Self {
-        match item {
-            CliSkipNextAction::Skip(cli_skip_action) => {
-                let skip_action: SkipAction = SkipAction::from(cli_skip_action);
-                Self::Skip(skip_action)
-            }
-        }
-    }
-}
-
-impl From<CliSkipNextAction> for CliNextAction {
-    fn from(item: CliSkipNextAction) -> Self {
-        match item {
-            CliSkipNextAction::Skip(cli_skip_action) => Self::Skip(cli_skip_action),
         }
     }
 }
 
 impl NextAction {
-    pub fn input_next_action() -> Self {
+    pub fn from_cli_skip_next_action(
+        item: CliSkipNextAction,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
+        match item {
+            CliSkipNextAction::Skip(cli_skip_action) => {
+                let skip_action: SkipAction =
+                    SkipAction::from(cli_skip_action, connection_config, sender_account_id)?;
+                Ok(Self::Skip(skip_action))
+            }
+        }
+    }
+}
+
+impl CliNextAction {
+    fn from(item: CliSkipNextAction) -> color_eyre::eyre::Result<Self> {
+        match item {
+            CliSkipNextAction::Skip(cli_skip_action) => Ok(Self::Skip(cli_skip_action)),
+        }
+    }
+}
+
+impl NextAction {
+    pub fn input_next_action(
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         println!();
         let variants = NextActionDiscriminants::iter().collect::<Vec<_>>();
         let next_action = variants
@@ -84,7 +98,11 @@ impl NextAction {
             NextActionDiscriminants::AddAction => CliNextAction::AddAction(Default::default()),
             NextActionDiscriminants::Skip => CliNextAction::Skip(Default::default()),
         };
-        Self::from(cli_next_action)
+        Ok(Self::from_cli_next_action(
+            cli_next_action,
+            connection_config,
+            sender_account_id,
+        )?)
     }
 
     pub async fn process(
@@ -124,15 +142,23 @@ pub struct SelectAction {
     transaction_subcommand: ActionSubcommand,
 }
 
-impl From<CliSelectAction> for SelectAction {
-    fn from(item: CliSelectAction) -> Self {
+impl SelectAction {
+    fn from(
+        item: CliSelectAction,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         let transaction_subcommand: ActionSubcommand = match item.transaction_subcommand {
-            Some(cli_transaction_subcommand) => ActionSubcommand::from(cli_transaction_subcommand),
-            None => ActionSubcommand::choose_action_command(),
+            Some(cli_transaction_subcommand) => ActionSubcommand::from(
+                cli_transaction_subcommand,
+                connection_config,
+                sender_account_id,
+            ),
+            None => ActionSubcommand::choose_action_command(connection_config, sender_account_id),
         };
-        Self {
+        Ok(Self {
             transaction_subcommand,
-        }
+        })
     }
 }
 
@@ -185,36 +211,80 @@ pub enum ActionSubcommand {
     DeleteAccessKey(self::delete_access_key_type::DeleteAccessKeyAction),
 }
 
-impl From<CliActionSubcommand> for ActionSubcommand {
-    fn from(item: CliActionSubcommand) -> Self {
+impl ActionSubcommand {
+    fn from(
+        item: CliActionSubcommand,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> Self {
         match item {
             CliActionSubcommand::TransferNEARTokens(cli_transfer_near_token) => {
-                Self::TransferNEARTokens(cli_transfer_near_token.into())
+                Self::TransferNEARTokens(
+                    self::transfer_near_tokens_type::TransferNEARTokensAction::from(
+                        cli_transfer_near_token,
+                        connection_config,
+                        sender_account_id,
+                    )
+                    .unwrap(),
+                )
             }
-            CliActionSubcommand::CreateAccount(cli_create_account) => {
-                Self::CreateAccount(cli_create_account.into())
-            }
-            CliActionSubcommand::DeleteAccount(cli_delete_account) => {
-                Self::DeleteAccount(cli_delete_account.into())
-            }
-            CliActionSubcommand::AddAccessKey(cli_add_access_key) => {
-                Self::AddAccessKey(cli_add_access_key.into())
-            }
-            CliActionSubcommand::DeleteAccessKey(cli_delete_access_key) => {
-                Self::DeleteAccessKey(cli_delete_access_key.into())
-            }
-            CliActionSubcommand::StakeNEARTokens(cli_stake_near_token) => {
-                Self::StakeNEARTokens(cli_stake_near_token.into())
-            }
-            CliActionSubcommand::CallFunction(cli_call_function) => {
-                Self::CallFunction(cli_call_function.into())
-            }
+            CliActionSubcommand::CreateAccount(cli_create_account) => Self::CreateAccount(
+                self::create_account_type::CreateAccountAction::from(
+                    cli_create_account,
+                    connection_config,
+                    sender_account_id,
+                )
+                .unwrap(),
+            ),
+            CliActionSubcommand::DeleteAccount(cli_delete_account) => Self::DeleteAccount(
+                self::delete_account_type::DeleteAccountAction::from(
+                    cli_delete_account,
+                    connection_config,
+                    sender_account_id,
+                )
+                .unwrap(),
+            ),
+            CliActionSubcommand::AddAccessKey(cli_add_access_key) => Self::AddAccessKey(
+                self::add_access_key_mode::AddAccessKeyMode::from(
+                    cli_add_access_key,
+                    connection_config,
+                    sender_account_id,
+                )
+                .unwrap(),
+            ),
+            CliActionSubcommand::DeleteAccessKey(cli_delete_access_key) => Self::DeleteAccessKey(
+                self::delete_access_key_type::DeleteAccessKeyAction::from(
+                    cli_delete_access_key,
+                    connection_config,
+                    sender_account_id,
+                )
+                .unwrap(),
+            ),
+            CliActionSubcommand::StakeNEARTokens(cli_stake_near_token) => Self::StakeNEARTokens(
+                self::stake_near_tokens_type::StakeNEARTokensAction::from(
+                    cli_stake_near_token,
+                    connection_config,
+                    sender_account_id,
+                )
+                .unwrap(),
+            ),
+            CliActionSubcommand::CallFunction(cli_call_function) => Self::CallFunction(
+                self::call_function_type::CallFunctionAction::from(
+                    cli_call_function,
+                    connection_config,
+                    sender_account_id,
+                )
+                .unwrap(),
+            ),
         }
     }
 }
 
 impl ActionSubcommand {
-    pub fn choose_action_command() -> ActionSubcommand {
+    pub fn choose_action_command(
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> ActionSubcommand {
         println!();
         let variants = ActionSubcommandDiscriminants::iter().collect::<Vec<_>>();
         let action_subcommands = variants
@@ -250,7 +320,7 @@ impl ActionSubcommand {
                 CliActionSubcommand::DeleteAccessKey(Default::default())
             }
         };
-        Self::from(cli_action_subcomand)
+        Self::from(cli_action_subcomand, connection_config, sender_account_id)
     }
 
     pub async fn process(
@@ -315,13 +385,24 @@ pub struct SkipAction {
     pub sign_option: super::sign_transaction::SignTransaction,
 }
 
-impl From<CliSkipAction> for SkipAction {
-    fn from(item: CliSkipAction) -> Self {
+impl SkipAction {
+    fn from(
+        item: CliSkipAction,
+        connection_config: Option<crate::common::ConnectionConfig>,
+        sender_account_id: String,
+    ) -> color_eyre::eyre::Result<Self> {
         let sign_option: super::sign_transaction::SignTransaction = match item.sign_option {
-            Some(cli_sign_transaction) => cli_sign_transaction.into(),
-            None => super::sign_transaction::SignTransaction::choose_sign_option(),
+            Some(cli_sign_transaction) => super::sign_transaction::SignTransaction::from(
+                cli_sign_transaction,
+                connection_config,
+                sender_account_id,
+            )?,
+            None => super::sign_transaction::SignTransaction::choose_sign_option(
+                connection_config,
+                sender_account_id,
+            )?,
         };
-        Self { sign_option }
+        Ok(Self { sign_option })
     }
 }
 

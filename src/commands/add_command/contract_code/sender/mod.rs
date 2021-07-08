@@ -19,20 +19,30 @@ pub struct Sender {
     pub contract: super::contract::Contract,
 }
 
-impl From<CliSender> for Sender {
-    fn from(item: CliSender) -> Self {
+impl Sender {
+    pub fn from(
+        item: CliSender,
+        connection_config: Option<crate::common::ConnectionConfig>,
+    ) -> color_eyre::eyre::Result<Self> {
         let sender_account_id: String = match item.sender_account_id {
             Some(cli_sender_account_id) => cli_sender_account_id,
             None => Sender::input_sender_account_id(),
         };
         let contract = match item.contract {
-            Some(cli_contract) => super::contract::Contract::from(cli_contract),
-            None => super::contract::Contract::choose_contract(),
+            Some(cli_contract) => super::contract::Contract::from(
+                cli_contract,
+                connection_config,
+                sender_account_id.clone(),
+            )?,
+            None => super::contract::Contract::choose_contract(
+                connection_config,
+                sender_account_id.clone(),
+            )?,
         };
-        Self {
+        Ok(Self {
             sender_account_id,
             contract,
-        }
+        })
     }
 }
 
